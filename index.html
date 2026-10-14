@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Citron Scope</title>
+<meta name="description" content="Team Citron's radar modulation classifier, running in your browser on real recorded radar pulses.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1B1E0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='52' r='44' fill='%23E3CB12'/%3E%3Ccircle cx='50' cy='52' r='37' fill='%232A2D12'/%3E%3Cpath d='M50 52 L87 52 A37 37 0 0 0 68.5 20 Z' fill='%23C9DD45' opacity='.4'/%3E%3Cline x1='50' y1='52' x2='87' y2='52' stroke='%23C9DD45' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the scope</a>
+
+<header class="top">
+  <a class="brand" href="#main" aria-label="Citron, back to the scope">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="52" r="44" fill="#E3CB12"/><circle cx="50" cy="52" r="37" fill="#2A2D12"/><path d="M50 52 L87 52 A37 37 0 0 0 68.5 20 Z" fill="#C9DD45" opacity=".35"/><line x1="50" y1="52" x2="87" y2="52" stroke="#C9DD45" stroke-width="5" stroke-linecap="round"/><path d="M70,12 C78,0 96,2 98,6 C92,16 80,20 70,12 Z" fill="#55731A"/></svg>
+    <span>Citron</span>
+  </a>
+  <nav aria-label="Sections">
+    <a href="#gallery">Pulses</a>
+    <a href="#game">Beat the scope</a>
+    <a href="#how">How it works</a>
+  </nav>
+</header>
+
+<main id="main">
+  <section class="hero" aria-label="The citron scope">
+    <div class="scope-wrap">
+      <svg class="scope" id="scope" viewBox="0 0 400 400" role="img" aria-labelledby="scope-title">
+        <title id="scope-title">Citron scope: seven segments, one per modulation; the lit segment is the model's answer</title>
+        <defs>
+          <radialGradient id="juice" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#FBF3A6"/>
+            <stop offset=".55" stop-color="#EBD62A"/>
+            <stop offset="1" stop-color="#D9BE0E"/>
+          </radialGradient>
+        </defs>
+        <circle cx="200" cy="200" r="192" fill="#E3CB12"/>
+        <circle cx="200" cy="200" r="170" fill="#2A2D12"/>
+        <g id="segments"></g>
+        <g id="blips"></g>
+        <circle cx="200" cy="200" r="58" fill="none" stroke="#5B6127" stroke-width="1.2" opacity=".7"/>
+        <g class="sweep" id="sweep">
+          <path id="sweep-trail" fill="#C9DD45"/>
+          <line x1="200" y1="200" x2="368" y2="200" stroke="#C9DD45" stroke-width="2.6" stroke-linecap="round"/>
+        </g>
+        <circle cx="200" cy="200" r="7" fill="#C9DD45"/>
+        <g id="rind-labels" class="rind-labels"></g>
+      </svg>
+    </div>
+
+    <div class="readout">
+      <div class="verdict">
+        <p class="sr-only" id="live" aria-live="polite"></p>
+        <h1 class="verdict-class" id="verdict-class">Citron</h1>
+        <p class="verdict-line" id="verdict-line">Fetching the 660 templates…</p>
+      </div>
+
+      <figure class="plot">
+        <figcaption><span>I/Q trace</span><span class="mono" id="trace-axis">0 – 140 µs</span></figcaption>
+        <canvas id="trace" aria-label="I and Q samples of the pulse, with the clean pulse as a faint outline"></canvas>
+        <p class="legend"><i class="sw sw-i"></i>I <i class="sw sw-q"></i>Q <i class="sw sw-ghost"></i>the clean pulse, at the same scale</p>
+      </figure>
+      <figure class="plot">
+        <figcaption><span>Spectrogram, for your eyes only</span><span class="mono">−60 to +60 MHz</span></figcaption>
+        <canvas id="spectrogram" aria-label="Spectrogram of the pulse; the model never uses it"></canvas>
+      </figure>
+
+      <div class="snr">
+        <div class="snr-head">
+          <label for="snr-input">Signal to noise</label>
+          <output id="snr-out" class="mono" for="snr-input">+30 dB</output>
+          <button type="button" class="ghost-btn" id="redraw" title="Draw a new random noise sample">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            New noise
+          </button>
+        </div>
+        <input id="snr-input" type="range" min="-30" max="30" step="1" value="30" dir="rtl" aria-describedby="snr-hint">
+        <canvas class="curve" id="curve" aria-hidden="true"></canvas>
+        <p class="snr-hint" id="snr-hint">Drag right to bury the pulse. Under the slider: the model’s validation accuracy at the 13 SNRs it was scored on. <span id="curve-note"></span></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="gallery" id="gallery" aria-labelledby="gallery-title">
+    <div class="section-head">
+      <h2 id="gallery-title">Pick a pulse</h2>
+      <p>42 real pulses, recorded over the air by UCL’s ARESTOR radar: six per modulation, all from the validation split, so the model never saw them while it was built.</p>
+    </div>
+    <div class="shelf" id="shelf"></div>
+  </section>
+
+  <section class="game" id="game" aria-labelledby="game-title">
+    <div class="section-head">
+      <h2 id="game-title">Beat the scope</h2>
+      <p>Ten pulses, buried in noise. Name each one before the scope does. The scope’s answer stays sealed until you commit.</p>
+    </div>
+    <div class="game-bar">
+      <div class="levels" role="radiogroup" aria-label="Difficulty">
+        <button type="button" role="radio" aria-checked="false" data-snr="5">Fair fight <span class="mono">+5 dB</span></button>
+        <button type="button" role="radio" aria-checked="true" data-snr="-10">Hard <span class="mono">−10 dB</span></button>
+        <button type="button" role="radio" aria-checked="false" data-snr="-20">Hopeless <span class="mono">−20 dB</span></button>
+      </div>
+      <p class="tally mono" id="tally" aria-live="polite">You 0 · Scope 0 · round 1 of 10</p>
+    </div>
+    <div class="arena">
+      <figure class="plot arena-plot">
+        <figcaption><span>Mystery pulse</span><span class="mono" id="arena-snr"></span></figcaption>
+        <canvas id="arena-spec" aria-label="Spectrogram of the mystery pulse"></canvas>
+        <canvas id="arena-trace" aria-label="I/Q trace of the mystery pulse"></canvas>
+      </figure>
+      <div class="answer">
+        <svg class="answer-scope" id="answer-scope" viewBox="0 0 400 400" role="group" aria-label="Your guess: pick the segment you think it is">
+          <circle cx="200" cy="200" r="192" fill="#E3CB12"/>
+          <circle cx="200" cy="200" r="170" fill="#2A2D12"/>
+          <g id="ans-segments"></g>
+          <circle cx="200" cy="200" r="7" fill="#C9DD45"/>
+          <g id="ans-labels" class="rind-labels"></g>
+        </svg>
+        <p class="answer-hint" id="answer-hint">Tap the segment you think it is.</p>
+      </div>
+    </div>
+    <div class="exemplars">
+      <p>What each one looks like with no noise</p>
+      <div class="ex-row" id="exemplars"></div>
+    </div>
+    <div class="reveal" id="reveal" aria-live="polite"></div>
+  </section>
+
+  <section class="how" id="how" aria-labelledby="how-title">
+    <h2 id="how-title">How it works</h2>
+    <div class="how-body">
+      <p class="lede">Every waveform setting the radar can transmit repeats almost exactly from pulse to pulse. So instead of training a network, we averaged the 80 training pulses of each of the 660 settings into one template, and the model just asks which template the incoming pulse lines up with best.</p>
+      <p>The dots on the scope are those 660 templates, inside their modulation’s segment: the brighter the dot, the better the pulse lines up with it.</p>
+      <dl class="facts">
+        <div><dt class="mono">0.9918</dt><dd>mean balanced accuracy on validation, 13 SNRs from +30 to −30 dB</dd></div>
+        <div><dt class="mono">1.000</dt><dd>from +30 down to −25 dB; 0.893 at −30 dB</dd></div>
+        <div><dt class="mono">8.4 MB</dt><dd>the bank in your browser, int8 instead of 89 MB float32; it agrees with the submitted model on every validation pulse to −25 dB and 99.8% at −30 dB</dd></div>
+      </dl>
+      <h3>What it can’t do</h3>
+      <ul class="limits">
+        <li>It only knows the 660 settings in the dataset. Hide a pulse’s own setting and accuracy falls to 0.48, so a waveform it has never heard will be named wrongly with confidence.</li>
+        <li>The spectrogram is here for you. The model reads time-domain I/Q only; this is our Track A entry, which allows no FFT anywhere.</li>
+        <li>Noise is the organizers’ rule: complex Gaussian noise sized from the power in fixed windows, then rounded back to 16-bit samples, exactly as in the competition.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <p><strong>Team Citron</strong> · IEEE AESS / UCL Radar ML Lite hackathon, October 2026 · private showcase, please don’t share the link.</p>
+  <p>Data: Ritchie, White and Hosford (2025), <a href="https://doi.org/10.5522/04/30752767.v1">RadarML, version 1</a>, licensed <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">CC BY-NC-ND 4.0</a>. Pulses are shown as recorded; the noise is added in your browser.</p>
+</footer>
+</body>
+</html>
