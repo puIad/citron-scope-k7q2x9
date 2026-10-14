@@ -231,6 +231,9 @@ function drawCurve(meta, snr) {
   ctx.fillStyle = '#E8D21D'; ctx.fillRect(x - d, top - 6 * d, 2 * d, bottom - top + 6 * d);
   ctx.beginPath(); ctx.arc(x, y, 4.5 * d, 0, 7); ctx.fill();
 }
+const curveNote = (snr, c) => (c.exact
+  ? `At <b>${dB(snr)}</b>: <b>${(100 * c.acc).toFixed(1)}%</b> of 13,200 validation pulses named correctly (balanced).`
+  : `At <b>${dB(snr)}</b>: about <b>${(100 * c.acc).toFixed(0)}%</b> (measured every 5 dB).`);
 function curveAt(meta, snr) {
   const p = meta.validation.per_snr.slice().sort((a, b) => a.snr - b.snr);
   for (let i = 0; i < p.length - 1; i++) {
@@ -268,9 +271,7 @@ function render() {
   $('snr-input').setAttribute('aria-valuetext', dB(state.snr));
   drawCurve(meta, state.snr);
   const c = curveAt(meta, state.snr);
-  $('curve-note').innerHTML = c.exact
-    ? `At <b>${dB(state.snr)}</b>: <b>${(100 * c.acc).toFixed(1)}%</b> of 13,200 validation pulses named correctly (balanced).`
-    : `At <b>${dB(state.snr)}</b>: about <b>${(100 * c.acc).toFixed(0)}%</b> (measured every 5 dB).`;
+  $('curve-note').innerHTML = curveNote(state.snr, c);
   if (out.label !== state.lastLabel) { $('live').textContent = `The scope says ${NAMES[cls][0]}.`; state.lastLabel = out.label; }
 }
 const schedule = () => { if (!state.frame) state.frame = requestAnimationFrame(render); };
@@ -426,6 +427,7 @@ async function main() {
   document.body.classList.add('loading');
   const meta = await (await fetch('data/meta.json')).json();
   state.meta = meta;
+  $('curve-ghost').innerHTML = curveNote(-30, { exact: true, acc: 1 });
   buildScope(meta);
   const [gallery, templates] = await Promise.all([
     fetchBytes('data/gallery.bin', () => {}),
