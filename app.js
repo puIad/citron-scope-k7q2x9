@@ -390,15 +390,19 @@ function tally() { $('tally').textContent = `You ${game.you} · Scope ${game.sco
 async function fetchBytes(url, onProgress) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
-  const total = +res.headers.get('content-length') || 0;
-  if (!res.body || !total) return res.arrayBuffer();
-  const reader = res.body.getReader(), buf = new Uint8Array(total);
+  if (!res.body) return res.arrayBuffer();
+  // Content-Length is the compressed size when the host gzips (GitHub Pages does), so it is only a total when uncompressed.
+  const total = res.headers.get('content-encoding') ? 0 : +res.headers.get('content-length') || 0;
+  const reader = res.body.getReader(), chunks = [];
   let got = 0;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    buf.set(value, got); got += value.length; onProgress(got, total);
+    chunks.push(value); got += value.length; onProgress(got, total);
   }
+  const buf = new Uint8Array(got);
+  let at = 0;
+  for (const c of chunks) { buf.set(c, at); at += c.length; }
   return buf.buffer;
 }
 function introGlide() {
@@ -426,7 +430,7 @@ async function main() {
   const [gallery, templates] = await Promise.all([
     fetchBytes('data/gallery.bin', () => {}),
     fetchBytes('data/templates.bin', (got, total) => {
-      $('verdict-line').innerHTML = `Loading the 660 templates: <span class="mono">${(got / 1e6).toFixed(1)} / ${(total / 1e6).toFixed(1)} MB</span>`;
+      $('verdict-line').innerHTML = `Loading the 660 templates: <span class="mono">${(got / 1e6).toFixed(1)}${total ? ` / ${(total / 1e6).toFixed(1)}` : ''} MB</span>`;
     }),
   ]);
   state.gallery = new Int16Array(gallery);
